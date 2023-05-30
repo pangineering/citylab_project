@@ -49,15 +49,11 @@ private:
       } else if (direction == "left") {
         turn_left();
         rclcpp::sleep_for(std::chrono::milliseconds(1000));
-        stop_robot();
-        rclcpp::sleep_for(std::chrono::milliseconds(500));
-        move_robot();
+
       } else if (direction == "right") {
         turn_right();
-        rclcpp::sleep_for(std::chrono::milliseconds(1000));
-        stop_robot();
+
         rclcpp::sleep_for(std::chrono::milliseconds(500));
-        move_robot();
       }
     }
   }
