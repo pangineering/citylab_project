@@ -18,6 +18,10 @@ public:
         std::bind(&MoveRobot::laserCallback, this, std::placeholders::_1));
     timer_ = this->create_wall_timer(
         500ms, std::bind(&MoveRobot::timer_callback, this));
+
+    // Initialize parameters
+    this->declare_parameter("obstacle_threshold", 0.05);
+    this->declare_parameter("angular_velocity", 0.2);
   }
 
 private:
@@ -26,71 +30,67 @@ private:
 
     // Get the minimum range detected by the laser scan
     float min_range = *std::min_element(msg->ranges.begin(), msg->ranges.end());
-
-    // Set a threshold distance for obstacle detection
-    float obstacle_threshold = 0.5; // 0.2 meters
-
-    // Set a threshold distance for obstacle avoidance
-    float avoid_threshold = 0.8; // 0.8 meters
+    float front_range = msg->ranges[msg->ranges.size() / 2];
+    // Read parameters
+    float obstacle_threshold =
+        this->get_parameter("obstacle_threshold").as_double();
+    float angular_velocity =
+        this->get_parameter("angular_velocity").as_double();
 
     // Decide which direction to turn based on the available free space
     // Calculate the range values for the left, front, and right sectors
-    int num_readings = msg->ranges.size();
-    int left_index = num_readings / 4;
-    int right_index = 3 * num_readings / 4;
-    std::vector<float> left_ranges(msg->ranges.begin(),
-                                   msg->ranges.begin() + left_index);
-    std::vector<float> front_ranges(msg->ranges.begin() + left_index,
-                                    msg->ranges.begin() + right_index);
-    std::vector<float> right_ranges(msg->ranges.begin() + right_index,
-                                    msg->ranges.end());
+    size_t num_readings = msg->ranges.size();
+    size_t left_index = num_readings / 4;
+    size_t right_index = (3 * num_readings) / 4;
 
-    // Calculate the average range value for each sector
-    float avg_left_range =
-        std::accumulate(left_ranges.begin(), left_ranges.end(), 0.0) /
-        left_ranges.size();
+    float avg_left_range = 0.0f;
+    float avg_front_range = 0.0f;
+    float avg_right_range = 0.0f;
 
-    float avg_right_range =
-        std::accumulate(right_ranges.begin(), right_ranges.end(), 0.0) /
-        right_ranges.size();
+    size_t count_left = 0;
+    size_t count_front = 0;
+    size_t count_right = 0;
 
-    float avg_front_range =
-        std::accumulate(front_ranges.begin(), front_ranges.end(), 0.0) /
-        front_ranges.size();
+    for (size_t i = 0; i < num_readings; ++i) {
+      float range = msg->ranges[i];
 
-    float front_range =
-        *std::min_element(front_ranges.begin(), front_ranges.end());
-
-    // Check if there is an obstacle in front of the robot
-    if (front_range < obstacle_threshold) {
-      // Stop the robot
-      stop_robot();
-
-      // Choose the direction with the most free space
-      if (avg_left_range > avg_right_range &&
-          avg_left_range > avg_front_range && front_range <= 0.4) {
-        // Turn left
-        turn_left();
-        rclcpp::sleep_for(std::chrono::milliseconds(1000));
-      } else if (avg_right_range > avg_left_range &&
-                 avg_right_range > avg_front_range && front_range <= 0.4) {
-        // Turn right
-        turn_right();
-        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+      if (i < left_index) {
+        avg_left_range += range;
+        count_left++;
+      } else if (i >= left_index && i < right_index) {
+        avg_front_range += range;
+        count_front++;
       } else {
-        // No clear direction, move backward
-        move_backward();
-        rclcpp::sleep_for(std::chrono::milliseconds(1000));
-        // Choose the direction with the most free space again
-        if (avg_left_range > avg_right_range) {
-          // Turn left
-          turn_left();
-          rclcpp::sleep_for(std::chrono::milliseconds(1000));
-        } else {
-          // Turn right
-          turn_right();
-          rclcpp::sleep_for(std::chrono::milliseconds(1000));
-        }
+        avg_right_range += range;
+        count_right++;
+      }
+    }
+
+    if (count_left > 0) {
+      avg_left_range /= count_left;
+    }
+
+    if (count_front > 0) {
+      avg_front_range /= count_front;
+    }
+
+    if (count_right > 0) {
+      avg_right_range /= count_right;
+    }
+
+    // Check if there is an obstacle in any direction
+    if (front_range < 0.5) {
+      // Stop the robot
+      // stop_robot();
+      // Choose the direction with the most free space
+      if (avg_left_range > avg_right_range) {
+        // Turn left
+        turn(angular_velocity);
+        stop_robot();
+      } else {
+        // Turn right
+        turn(-angular_velocity);
+        stop_robot();
       }
     } else {
       // No obstacle, move forward
@@ -99,6 +99,7 @@ private:
   }
 
   void timer_callback() {
+    // Perform useful actions here, e.g., check battery level, update position
     // For demonstration purposes, print a message indicating that the robot
     // is moving
     std::cout << "Robot is moving" << std::endl;
@@ -111,13 +112,6 @@ private:
     publisher_->publish(message);
   }
 
-  void move_backward() {
-    auto message = geometry_msgs::msg::Twist();
-    message.linear.x = -0.1;
-    message.angular.z = 0.0;
-    publisher_->publish(message);
-  }
-
   void stop_robot() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0.0;
@@ -125,17 +119,10 @@ private:
     publisher_->publish(message);
   }
 
-  void turn_left() {
+  void turn(float angular_velocity) {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0.0;
-    message.angular.z = 0.2;
-    publisher_->publish(message);
-  }
-
-  void turn_right() {
-    auto message = geometry_msgs::msg::Twist();
-    message.linear.x = 0.0;
-    message.angular.z = -0.2;
+    message.angular.z = angular_velocity;
     publisher_->publish(message);
   }
 

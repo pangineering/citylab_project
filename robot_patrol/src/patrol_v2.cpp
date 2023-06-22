@@ -48,83 +48,18 @@ private:
         move_robot();
       } else if (direction == "left") {
         turn_left();
+        stop_robot();
         rclcpp::sleep_for(std::chrono::milliseconds(1000));
 
       } else if (direction == "right") {
         turn_right();
+        stop_robot();
 
         rclcpp::sleep_for(std::chrono::milliseconds(500));
+      } else {
+        move_backward();
+        stop_robot();
       }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      
     }
   }
 
