@@ -86,10 +86,14 @@ private:
       if (avg_left_range > avg_right_range) {
         // Turn left
         turn(angular_velocity);
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+
         stop_robot();
       } else {
         // Turn right
         turn(-angular_velocity);
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+
         stop_robot();
       }
     } else {

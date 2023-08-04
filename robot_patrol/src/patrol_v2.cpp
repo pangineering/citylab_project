@@ -10,12 +10,19 @@
 
 class MoveRobot : public rclcpp::Node {
 public:
-  MoveRobot() : Node("robot_patrol") {
+  MoveRobot() : Node("robot_patrol2") {
     publisher_ =
         this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+    auto scan_sub_qos =
+        rclcpp::QoS(rclcpp::KeepLast(10), rmw_qos_profile_sensor_data);
+    // Subscribe to the laser data
+    rclcpp::SubscriptionOptions scan_sub_options;
+    scan_sub_options.callback_group =
+        create_callback_group(rclcpp::CallbackGroupType::Reentrant);
     subscriber_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-        "scan", rclcpp::QoS(10),
-        std::bind(&MoveRobot::laserCallback, this, std::placeholders::_1));
+        "scan", scan_sub_qos,
+        std::bind(&MoveRobot::laserCallback, this, std::placeholders::_1),
+        scan_sub_options);
 
     directionServiceClient_ =
         this->create_client<robot_interfaces::srv::GetDirection>(
@@ -48,16 +55,20 @@ private:
         move_robot();
       } else if (direction == "left") {
         turn_left();
-        stop_robot();
         rclcpp::sleep_for(std::chrono::milliseconds(1000));
+        stop_robot();
 
       } else if (direction == "right") {
         turn_right();
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+
         stop_robot();
 
         rclcpp::sleep_for(std::chrono::milliseconds(500));
       } else {
         move_backward();
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+
         stop_robot();
       }
     }

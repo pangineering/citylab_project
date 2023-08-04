@@ -1,19 +1,27 @@
 #include <iostream>
 #include <memory>
 
+#include "rclcpp/qos.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/subscription_options.hpp"
+#include "rmw/qos_profiles.h"
 #include "robot_interfaces/srv/get_direction.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 
 class TestServiceNode : public rclcpp::Node {
 public:
-  TestServiceNode() : Node("test_service_node") {
+  TestServiceNode() : Node("test_service") {
+    auto scan_sub_qos =
+        rclcpp::QoS(rclcpp::KeepLast(10), rmw_qos_profile_sensor_data);
     // Subscribe to the laser data
-
+    rclcpp::SubscriptionOptions scan_sub_options;
+    scan_sub_options.callback_group =
+        create_callback_group(rclcpp::CallbackGroupType::Reentrant);
     laser_subscriber_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-        "scan", rclcpp::QoS(10),
+        "scan", scan_sub_qos,
         std::bind(&TestServiceNode::processLaserData, this,
-                  std::placeholders::_1));
+                  std::placeholders::_1),
+        scan_sub_options);
 
     // Create the client to call the service
     directionServiceClient_ =
@@ -33,11 +41,9 @@ public:
 
 private:
   void processLaserData(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
-
     // Create a request object and populate it with the laser scan data
     auto request =
         std::make_shared<robot_interfaces::srv::GetDirection::Request>();
-    // Assuming the laser scan data is stored in the `msg` object
     request->laser_data = *msg;
 
     // Use the service client to call the direction service

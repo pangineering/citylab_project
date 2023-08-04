@@ -20,7 +20,7 @@ public:
   // Callback function for the direction service
   bool directionCallback(
       const robot_interfaces::srv::GetDirection::Request::SharedPtr request,
-      robot_interfaces::srv::GetDirection::Response::SharedPtr response) {
+      const robot_interfaces::srv::GetDirection::Response::SharedPtr response) {
     // Access the laser scan data from the request
     const auto &laserScan = request->laser_data;
 
