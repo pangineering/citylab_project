@@ -39,7 +39,11 @@ ament_target_dependencies(test_service_node rclcpp sensor_msgs std_msgs geometry
 add_executable(go_to_point_action_node src/go_to_point_action.cpp)
 ament_target_dependencies(go_to_point_action_node rclcpp sensor_msgs std_msgs geometry_msgs nav_msgs robot_interfaces rclcpp_action)
 
+add_executable(check_scan src/check_scan.cpp)
+ament_target_dependencies(check_scan rclcpp sensor_msgs)
+
 install(TARGETS
+check_scan
    robot_patrol_node
    robot_patrol_node_2
    direction_service_node

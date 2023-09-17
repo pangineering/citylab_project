@@ -11,94 +11,87 @@
 class MoveRobot : public rclcpp::Node {
 public:
   MoveRobot() : Node("robot_patrol2") {
-    // Create a publisher to publish Twist messages to the cmd_vel topic
     publisher_ =
         this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
-
-    // Create a subscription to the laser scan data
     auto scan_sub_qos =
         rclcpp::QoS(rclcpp::KeepLast(10), rmw_qos_profile_sensor_data);
+    // Subscribe to the laser data
     rclcpp::SubscriptionOptions scan_sub_options;
     scan_sub_options.callback_group =
         create_callback_group(rclcpp::CallbackGroupType::Reentrant);
     subscriber_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "scan", scan_sub_qos,
-        std::bind(&MoveRobot::processLaserData, this, std::placeholders::_1),
+        std::bind(&MoveRobot::laserCallback, this, std::placeholders::_1),
         scan_sub_options);
 
-    // Create a client to call the direction service
     directionServiceClient_ =
         this->create_client<robot_interfaces::srv::GetDirection>(
             "/direction_service");
   }
 
 private:
-  void processLaserData(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
+  void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
+    // Analyze the laser range data here to determine the best course of action
+
+    // Existing code ...
+
     // Create a request object and populate it with the laser scan data
     auto request =
         std::make_shared<robot_interfaces::srv::GetDirection::Request>();
+    // Assuming the laser scan data is stored in the `msg` object
     request->laser_data = *msg;
 
-    // Use the service client to call the direction service with a callback
-    directionServiceClient_->async_send_request(
-        request, std::bind(&MoveRobot::handleServiceResponse, this,
-                           std::placeholders::_1));
-  }
+    // Use the service client to call the direction service
+    auto future = directionServiceClient_->async_send_request(request);
 
-  void handleServiceResponse(
-      rclcpp::Client<robot_interfaces::srv::GetDirection>::SharedFuture
-          future) {
-    if (future.wait_for(std::chrono::seconds(1)) == std::future_status::ready) {
+    // Wait for the response from the service
+    if (rclcpp::spin_until_future_complete(shared_from_this(), future) ==
+        rclcpp::FutureReturnCode::SUCCESS) {
       auto response = future.get();
       std::string direction = response->direction;
 
-      // Print the received direction
-      RCLCPP_INFO(this->get_logger(), "Received direction: %s",
-                  direction.c_str());
-      std::string direction_1 = direction.c_str();
-      // Take action based on the received direction
-      if (direction_1 == "forward") {
+      // Command the robot based on the response direction
+      if (direction == "forward") {
         move_robot();
-      } else if (direction_1 == "turn_left") {
+      } else if (direction == "left") {
         turn_left();
-      } else if (direction_1 == "turn_right") {
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+        stop_robot();
+
+      } else if (direction == "right") {
         turn_right();
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+
+        stop_robot();
+
+        rclcpp::sleep_for(std::chrono::milliseconds(500));
       } else {
+        move_backward();
+        rclcpp::sleep_for(std::chrono::milliseconds(1000));
+
         stop_robot();
       }
-
-      // Log that the service was called
-      RCLCPP_INFO(this->get_logger(), "Service was called.");
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Failed to call the service");
     }
   }
 
-  // Move the robot forward
   void move_robot() {
     auto message = geometry_msgs::msg::Twist();
-    message.linear.x = 0.2;
+    message.linear.x = 0.4;
     message.angular.z = 0.0;
     publisher_->publish(message);
   }
-
-  // Move the robot backward
   void move_backward() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = -0.5;
     message.angular.z = 0.0;
     publisher_->publish(message);
   }
-
-  // Slow down the robot
   void slow_down() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0.1;
     message.angular.z = 0.0;
     publisher_->publish(message);
   }
-
-  // Stop the robot
   void stop_robot() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0.0;
@@ -106,15 +99,12 @@ private:
     publisher_->publish(message);
   }
 
-  // Turn the robot left
   void turn_left() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0.0;
     message.angular.z = 0.2;
     publisher_->publish(message);
   }
-
-  // Turn the robot right
   void turn_right() {
     auto message = geometry_msgs::msg::Twist();
     message.linear.x = 0.0;
