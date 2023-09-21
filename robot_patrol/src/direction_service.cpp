@@ -39,28 +39,32 @@ public:
     const float right_angle = -M_PI / 2; // 90 degrees to the right
 
     // Calculate the index in the ranges array for each desired angle
-    int front_index = static_cast<int>((front_angle - laser_data.angle_min) /
-                                       laser_data.angle_increment);
-    int left_index = static_cast<int>((left_angle - laser_data.angle_min) /
-                                      laser_data.angle_increment);
-    int right_index = static_cast<int>((right_angle - laser_data.angle_min) /
-                                       laser_data.angle_increment);
+    // int front_index = static_cast<int>((front_angle - laser_data.angle_min) /
+    //                                   laser_data.angle_increment);
+    // int left_index = static_cast<int>((left_angle - laser_data.angle_min) /
+    //                                  laser_data.angle_increment);
+    // int right_index = static_cast<int>((right_angle - laser_data.angle_min) /
+    //                                   laser_data.angle_increment);
 
     // Ensure the indices are within the valid range
-    front_index =
-        std::max(0, std::min(front_index,
-                             static_cast<int>(laser_data.ranges.size()) - 1));
-    left_index =
-        std::max(0, std::min(left_index,
-                             static_cast<int>(laser_data.ranges.size()) - 1));
-    right_index =
-        std::max(0, std::min(right_index,
-                             static_cast<int>(laser_data.ranges.size()) - 1));
+    // front_index =
+    //    std::max(0, std::min(front_index,
+    //   static_cast<int>(laser_data.ranges.size()) - 1));
+    // left_index =
+    //    std::max(0, std::min(left_index,
+    //  static_cast<int>(laser_data.ranges.size()) - 1));
+    // right_index =
+    //    std::max(0, std::min(right_index,
+    // static_cast<int>(laser_data.ranges.size()) - 1));
 
     // Extract the distance values for front, left, and right angles
-    float front_dist = laser_data.ranges[front_index];
-    float left_dist = laser_data.ranges[left_index];
-    float right_dist = laser_data.ranges[right_index];
+    // float front_dist = laser_data.ranges[front_index];
+
+    // float left_dist = laser_data.ranges[left_index];
+    // float right_dist = laser_data.ranges[right_index];
+    float right_dist = laser_data.ranges[0];
+    float front_dist = laser_data.ranges[360];
+    float left_dist = laser_data.ranges[90];
 
     // Now you have the distances for the specified angles
     RCLCPP_INFO(this->get_logger(), "Front Distance: %.2f meters", front_dist);
@@ -70,7 +74,7 @@ public:
     // Implement your logic here to determine the next action based on distances
     // For example, if the front distance is less than a threshold, set the
     // response direction to "forward"; otherwise, set it to "stop".
-    const float obstacle_threshold = 0.5; // Adjust as needed
+    const float obstacle_threshold = 0.3; // Adjust as needed
 
     if (front_dist > obstacle_threshold && left_dist > obstacle_threshold &&
         right_dist > obstacle_threshold) {

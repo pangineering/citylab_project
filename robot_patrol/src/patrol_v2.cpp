@@ -60,11 +60,19 @@ private:
       if (direction_1 == "forward") {
         move_robot();
       } else if (direction_1 == "turn_left") {
-        turn_left();
-      } else if (direction_1 == "turn_right") {
-        turn_right();
-      } else {
         stop_robot();
+        turn_left();
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+      } else if (direction_1 == "turn_right") {
+        stop_robot();
+        turn_right();
+        rclcpp::sleep_for(std::chrono::milliseconds(100));
+
+      } else if (direction_1 == "stop") {
+        stop_robot();
+      } else {
+        move_backward();
       }
 
       // Log that the service was called
@@ -85,7 +93,7 @@ private:
   // Move the robot backward
   void move_backward() {
     auto message = geometry_msgs::msg::Twist();
-    message.linear.x = -0.5;
+    message.linear.x = -0.2;
     message.angular.z = 0.0;
     publisher_->publish(message);
   }

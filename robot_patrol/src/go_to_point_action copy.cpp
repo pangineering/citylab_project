@@ -1,7 +1,7 @@
-#include "geometry_msgs/msg/point32.hpp" // Added for Point32
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "std_msgs/msg/bool.hpp" // Added for the result
+#include "geometry_msgs/msg/point32.hpp" // Added for Point32
 #include <functional>
 #include <memory>
 #include <thread>
@@ -46,7 +46,8 @@ public:
 
     // Create a timer for the control loop
     control_loop_timer_ = this->create_wall_timer(
-        std::chrono::seconds(1), std::bind(&GoToPointServer::control_loop, this));
+        std::chrono::seconds(1),
+        std::bind(&GoToPointServer::control_loop, this));
 
     // Initialize result publisher
     result_publisher_ =
@@ -66,7 +67,6 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr
       result_publisher_; // Publisher for result
   rclcpp::TimerBase::SharedPtr control_loop_timer_;
-  std::shared_ptr<GoalHandle> current_goal_handle_; // Store current goal handle
 
   rclcpp_action::GoalResponse
   handle_goal(const rclcpp_action::GoalUUID &uuid,
@@ -88,10 +88,9 @@ private:
   void handle_accepted(const std::shared_ptr<GoalHandle> goal_handle) {
     using namespace std::placeholders;
 
-    current_goal_handle_ = goal_handle; // Store the current goal handle
-
     // Start a new thread to execute the goal
-    std::thread{&GoToPointServer::execute_goal, this, goal_handle}.detach();
+    std::thread{std::bind(&GoToPointServer::execute_goal, this, _1, goal_handle)}
+        .detach();
   }
 
   void execute_goal(const std::shared_ptr<GoalHandle> goal_handle) {
@@ -171,11 +170,6 @@ private:
   }
 
   void control_loop() {
-    if (!current_goal_handle_) {
-      return;
-    }
-    const auto goal_pos = current_goal_handle_->get_goal()->goal_pos;
-
     // Define PID constants (tune these values)
     const double kp_linear = 0.2;  // Proportional gain for linear velocity
     const double ki_linear = 0.0;  // Integral gain for linear velocity
